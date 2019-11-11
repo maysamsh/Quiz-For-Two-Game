@@ -1,0 +1,6 @@
+framework module Pods_Quiz_For_Two {
+  umbrella header "Pods-Quiz For Two-umbrella.h"
+
+  export *
+  module * { export * }
+}
