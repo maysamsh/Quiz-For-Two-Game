@@ -1,46 +1,16 @@
 //
-//  ViewController.swift
-//  Quiz For Two
+//  Service.swift
+//  SuperheroMoviesQuiz
 //
 //  Created by Bartek Bugajski on 10/11/2019.
 //  Copyright © 2019 BB. All rights reserved.
 //
 
-import UIKit
+import Foundation
 
-class ViewController: UIViewController {
-
-    var service = Service.shared
-    var questions = [Question]()
-    
-    var counter = 0
-//    var questionResults = [Question]()
-//    var questionResult: Question! {
-//        didSet {
-//            questionLabel.text = questionResult.question
-//
-//            }
-//        }
-//
-    
-    @IBOutlet weak var questionLabel: UILabel!
-    
-    @IBOutlet weak var btnA: UIButton!
-    
-    @IBOutlet weak var btnB: UIButton!
-    
-    @IBOutlet weak var btnC: UIButton!
-    
-    @IBOutlet weak var btnD: UIButton!
-    
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        // Do any additional setup after loading the view.
-       fetchQuestions()
-       
-    }
-    
+class Service {
+    static let shared = Service() //singleton
+    var questionResults = [Question]()
     func fetchQuestions() {
                 let urlString = "https://opentdb.com/api.php?amount=10&category=9&difficulty=easy&type=multiple"
                 guard let url = URL(string: urlString) else { return }
@@ -58,17 +28,20 @@ class ViewController: UIViewController {
         //            print(String(data: data!, encoding: .utf8))
                     
                     guard let data = data else { return }
+                    
                     do {
                          let questionResult = try JSONDecoder().decode(QuestionResult.self, from: data)
+                       
                         questionResult.results.forEach({
                             print($0.question, $0.correct_answer, $0.incorrect_answers)
                         })
-//
-                        let questionResults = questionResult.results
-                      print(questionResults)
-   
+                        
+                        self.questionResults = questionResult.results
+                        
                         DispatchQueue.main.async {
-                        }
+                            
+                         //    self.collectionView.reloadData()
+                                                                        }
     //                    completion(questionResult.results, nil)
                         
     //                    DispatchQueue.main.async {
@@ -83,10 +56,4 @@ class ViewController: UIViewController {
                 }.resume() //fires off the request
                 
             }
-        
-    
-
-
-
 }
-
