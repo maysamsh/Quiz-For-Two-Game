@@ -11,49 +11,55 @@ import Foundation
 class Service {
     static let shared = Service() //singleton
     var questionResults = [Question]()
-    func fetchQuestions() {
-                let urlString = "https://opentdb.com/api.php?amount=10&category=9&difficulty=easy&type=multiple"
-                guard let url = URL(string: urlString) else { return }
-                
-                //fetch data from internet
-                URLSession.shared.dataTask(with: url) { (data, resp, err) in
-                    if let jsonErr = err {
-                        print("Failed to fetch questions:", jsonErr)
-    //                    completion([], jsonErr)
-                        return
-                    }
-                    
-        //            //success
-        //            print(data)
-        //            print(String(data: data!, encoding: .utf8))
-                    
-                    guard let data = data else { return }
-                    
-                    do {
-                         let questionResult = try JSONDecoder().decode(QuestionResult.self, from: data)
-                       
-                        questionResult.results.forEach({
-                            print($0.question, $0.correct_answer, $0.incorrect_answers)
-                        })
-                        
-                        self.questionResults = questionResult.results
-                        
-                        DispatchQueue.main.async {
-                            
-                         //    self.collectionView.reloadData()
-                                                                        }
-    //                    completion(questionResult.results, nil)
-                        
-    //                    DispatchQueue.main.async {
-    //                        self.collectionView.reloadData()
-    //                    }
-                        
-                    } catch let jsonErr {
-                        print("Failed to decode json:", jsonErr)
-    //                    completion([], jsonErr)
-                    }
-          
-                }.resume() //fires off the request
+    func fetchQuestions (handler: @escaping (Swift.Result<QuestionResult, Error>) -> Void) {
+        let urlString = "https://opentdb.com/api.php?amount=10&category=9&difficulty=easy&type=multiple"
+        guard let url = URL(string: urlString) else {
+            handler(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { (data, resp, err) in
+            if let jsonErr = err {
+                handler(.failure(jsonErr))
+                return
+            }
+            
+            guard let data = data else {
+                handler(.failure(NetworkError.invalidResponse))
+                return
                 
             }
+            
+            do {
+                let questionResult = try JSONDecoder().decode(QuestionResult.self, from: data)
+                
+                handler(.success(questionResult))
+                
+                
+            } catch let error {
+                handler(.failure(error))
+            }
+            
+        }.resume()
+        
+    }
 }
+
+public enum NetworkError: Error {
+    case invalidURL
+    case invalidResponse
+}
+
+extension NetworkError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return NSLocalizedString("The requested URL is invalid.", comment: "")
+        case .invalidResponse:
+            return NSLocalizedString("URL components are invalid or malformed.", comment: "")
+        }
+    }
+}
+
+
+

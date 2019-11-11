@@ -8,85 +8,119 @@
 
 import UIKit
 
-class ViewController: UIViewController {
+struct Answer {
+    let title: String
+    let isCorrect: Bool
+}
 
+class ViewController: UIViewController {
+    
     var service = Service.shared
     var questions = [Question]()
-    
-    var counter = 0
-//    var questionResults = [Question]()
-//    var questionResult: Question! {
-//        didSet {
-//            questionLabel.text = questionResult.question
-//
-//            }
-//        }
-//
+    var activeAnswers = [Answer]()
+    var defaultBackgroundColor: UIColor?
     
     @IBOutlet weak var questionLabel: UILabel!
-    
     @IBOutlet weak var btnA: UIButton!
-    
     @IBOutlet weak var btnB: UIButton!
-    
     @IBOutlet weak var btnC: UIButton!
-    
     @IBOutlet weak var btnD: UIButton!
+    @IBOutlet weak var nextQuestion: UIButton!
     
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view.
-       fetchQuestions()
-       
+        configureUI()
+        fetchQuestions()
+    }
+    
+    func configureUI(){
+        self.defaultBackgroundColor = btnD.backgroundColor
+        for item in [btnA, btnB, btnC, btnD] {
+            item?.isEnabled = false
+        }
+        nextQuestion.isEnabled = false
+    }
+    
+    func resetButtonTags(){
+        btnA.tag = 0
+        btnB.tag = 0
+        btnC.tag = 0
+        btnD.tag = 0
+        for item in [btnA, btnB, btnC, btnD] {
+            item?.backgroundColor = self.defaultBackgroundColor
+        }
+    }
+    
+    func enableButtons(){
+        for item in [btnA, btnB, btnC, btnD] {
+            item?.isEnabled = true
+        }
     }
     
     func fetchQuestions() {
-                let urlString = "https://opentdb.com/api.php?amount=10&category=9&difficulty=easy&type=multiple"
-                guard let url = URL(string: urlString) else { return }
-                
-                //fetch data from internet
-                URLSession.shared.dataTask(with: url) { (data, resp, err) in
-                    if let jsonErr = err {
-                        print("Failed to fetch questions:", jsonErr)
-    //                    completion([], jsonErr)
-                        return
-                    }
-                    
-        //            //success
-        //            print(data)
-        //            print(String(data: data!, encoding: .utf8))
-                    
-                    guard let data = data else { return }
-                    do {
-                         let questionResult = try JSONDecoder().decode(QuestionResult.self, from: data)
-                        questionResult.results.forEach({
-                            print($0.question, $0.correct_answer, $0.incorrect_answers)
-                        })
-//
-                        let questionResults = questionResult.results
-                      print(questionResults)
-   
-                        DispatchQueue.main.async {
-                        }
-    //                    completion(questionResult.results, nil)
-                        
-    //                    DispatchQueue.main.async {
-    //                        self.collectionView.reloadData()
-    //                    }
-                        
-                    } catch let jsonErr {
-                        print("Failed to decode json:", jsonErr)
-    //                    completion([], jsonErr)
-                    }
-          
-                }.resume() //fires off the request
-                
+        service.fetchQuestions { (result) in
+            DispatchQueue.main.async {
+                self.enableButtons()
             }
-        
+            switch result {
+            case .failure(let error):
+                print(error)
+            case .success(let response):
+                self.questions = response.results
+                self.assignAnswers()
+            }
+        }
+    }
     
-
-
-
+    func assignAnswers(){
+        if !self.questions.isEmpty {
+            if let last = questions.popLast() {
+                var answers = [Answer]()
+                
+                // Adding answers
+                answers.append(Answer(title: last.correct_answer, isCorrect: true))
+                for item in last.incorrect_answers {
+                    answers.append(Answer(title: item, isCorrect: false))
+                }
+                // Shuffle the array
+                answers.shuffle()
+                self.activeAnswers = answers
+                
+                DispatchQueue.main.async {
+                    self.nextQuestion.isEnabled = true
+                    self.resetButtonTags()
+                    
+                    self.questionLabel.text = last.question
+                    // Make sure the index is not out of range
+                    self.btnA.setTitle(answers[0].title, for: .normal)
+                    if answers[0].isCorrect { self.btnA.tag = 1 }
+                    self.btnB.setTitle(answers[1].title, for: .normal)
+                    if answers[1].isCorrect { self.btnB.tag = 1 }
+                    self.btnC.setTitle(answers[2].title, for: .normal)
+                    if answers[2].isCorrect { self.btnC.tag = 1 }
+                    self.btnD.setTitle(answers[3].title, for: .normal)
+                    if answers[3].isCorrect { self.btnD.tag = 1 }
+                    
+                }
+            }
+        }else{
+            DispatchQueue.main.async {
+                self.nextQuestion.isEnabled = false
+            }
+        }
+    }
+    
+    @IBAction func btnClicked(_ sender: UIButton) {
+        if sender.tag == 1 {
+            sender.backgroundColor = .green
+        }else{
+            sender.backgroundColor = .red
+        }
+    }
+    
+    @IBAction func showNext(_ sender: UIButton) {
+        assignAnswers()
+    }
 }
 
